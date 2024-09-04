@@ -46,8 +46,9 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
-    // created a collection to find data
-    const serviceCollection = client.db("carGenius").collection("Services");
+    const serviceCollection = client.db("carGenius").collection("Services"); // created a collection to find data
+    // Created another Collection for bookings record
+    const bookingCollection = client.db("carGenius").collection("Bookings");
 
     // find data UNDER an api
     app.get("/services", async (req, res) => {
@@ -67,6 +68,15 @@ async function run() {
       };
 
       const result = await serviceCollection.findOne(query, options);
+      res.send(result);
+    });
+
+    // bookings Info
+    app.post("/bookings", async (req, res) => {
+      const booking = req.body;
+      console.log("booking Info", booking);
+      // after getting bookingInfo in server site,InsertOne the data to MongoDb
+      const result = await bookingCollection.insertOne(booking);
       res.send(result);
     });
     // *****************************************
