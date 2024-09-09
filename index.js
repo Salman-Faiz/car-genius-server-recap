@@ -71,7 +71,8 @@ async function run() {
       res.send(result);
     });
 
-    // bookings Info
+    // bookings Info==>>
+    // get
     // get booking info for specific user.. using Query to filter
     app.get("/bookings", async (req, res) => {
       console.log(req.query.email);
@@ -88,6 +89,27 @@ async function run() {
       console.log("booking Info", booking);
       // after getting bookingInfo in server site,InsertOne the data to MongoDb
       const result = await bookingCollection.insertOne(booking);
+      res.send(result);
+    });
+    // UPDATE
+    app.patch("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedBooking = req.body;
+      console.log(updatedBooking);
+      const updatedDoc = {
+        $set: {
+          status: updatedBooking.status,
+        },
+      };
+      const result = await bookingCollection.updateOne(filter, updatedDoc);
+      res.send(result);
+    });
+    // DELETE
+    app.delete("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await bookingCollection.deleteOne(query);
       res.send(result);
     });
     // *****************************************
