@@ -1,14 +1,23 @@
 // to start basic express server
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const app = express();
 // port for run the server
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 // to convert json data which will be sent through req.body
 app.use(express.json());
+
+app.use(cookieParser());
 
 //app.get user for check whether the server is running or not
 app.get("/", (req, res) => {
@@ -50,6 +59,24 @@ async function run() {
     // Created another Collection for bookings record
     const bookingCollection = client.db("carGenius").collection("Bookings");
 
+    // AUTH RELATED API
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "2hr",
+      });
+      // set cookie
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: false, //if use https then secure will be true
+          sameSite: "lax", //if the server and client site remain in the same side then the value is true/yes....{lax means fixed if needed}
+        })
+        .send({ success: true });
+    });
+
+    // ****SERVICES RELATED API
     // find data UNDER an api
     app.get("/services", async (req, res) => {
       const cursor = serviceCollection.find();
@@ -76,6 +103,9 @@ async function run() {
     // get booking info for specific user.. using Query to filter
     app.get("/bookings", async (req, res) => {
       console.log(req.query.email);
+      // console.log("Cookies:", req.cookies); // Check all cookies
+      const token = req.cookies.token;
+      console.log("Token:", token);
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
