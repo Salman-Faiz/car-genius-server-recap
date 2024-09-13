@@ -7,7 +7,7 @@ const app = express();
 // port for run the server
 const port = process.env.PORT || 5000;
 
-// middleware
+// middleware---BUILDIN
 app.use(
   cors({
     origin: ["http://localhost:5173"],
@@ -50,6 +50,30 @@ const client = new MongoClient(uri, {
   },
 });
 
+// MIDDLEWARE---CUSTOM
+const logger = async (req, res, next) => {
+  console.log("called", req.host, req.originalUrl);
+  next();
+};
+// verify token middleware
+const verifyToken = async (req, res, next) => {
+  const token = req.cookies?.token;
+  console.log("value of the token in middleware", token);
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    // err
+    if (err) {
+      console.log(err);
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+    // if token is valid it would be decoded
+    console.log("value in the token", decoded);
+    req.user = decoded;
+    next();
+  });
+};
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -60,7 +84,7 @@ async function run() {
     const bookingCollection = client.db("carGenius").collection("Bookings");
 
     // AUTH RELATED API
-    app.post("/jwt", async (req, res) => {
+    app.post("/jwt", logger, async (req, res) => {
       const user = req.body;
       console.log(user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
@@ -78,14 +102,14 @@ async function run() {
 
     // ****SERVICES RELATED API
     // find data UNDER an api
-    app.get("/services", async (req, res) => {
+    app.get("/services", logger, async (req, res) => {
       const cursor = serviceCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
 
     // Find a specific data
-    app.get("/services/:id", async (req, res) => {
+    app.get("/services/:id", logger, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       //
@@ -101,11 +125,12 @@ async function run() {
     // bookings Info==>>
     // get
     // get booking info for specific user.. using Query to filter
-    app.get("/bookings", async (req, res) => {
+    app.get("/bookings", logger, verifyToken, async (req, res) => {
       console.log(req.query.email);
       // console.log("Cookies:", req.cookies); // Check all cookies
       const token = req.cookies.token;
       console.log("Token:", token);
+      console.log("user in the valid token", req.user);
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
